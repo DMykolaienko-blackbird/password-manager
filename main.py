@@ -1,10 +1,31 @@
+from json import JSONDecodeError
 from tkinter import *
 from tkinter import messagebox
 from password_generator import Password
+import json
 
-PASSWORDS_FILE_PATH = "passwords.txt"
+PASSWORDS_FILE_PATH = "passwords.json"
 RED_COLOR = "#FF0000"
 
+
+# ---------------------------- SEARCH CREDENTIALS ------------------------------- #
+def search_credentials():
+    website = website_entry.get().strip()
+    if not website:
+        messagebox.showerror(message="Please provide website name")
+    else:
+        try:
+            with open(PASSWORDS_FILE_PATH, "r") as file:
+                json_data = json.load(file)
+        except FileNotFoundError:
+            messagebox.showerror(message="No any stores were added yet")
+        else:
+            if website in json_data:
+                messagebox.showinfo(message=f"Data for store {website} was found\n"
+                                            f"Username: {json_data[website].get('username')}\n"
+                                            f"Password: {json_data[website].get('password')}")
+            else:
+                messagebox.showerror(message=f"There is no data for requested store {website}")
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def generate_password():
@@ -52,17 +73,29 @@ def save_password():
         error = True
     if error:
         messagebox.showerror(title="Values missing error", message="Please fill all fields with valid data")
-
     else:
-        save_approved = messagebox.askyesnocancel(title="Sure to save", message=f"There are the details provided: \n"
-                                                  f"Website:  {website}\n"
-                                                  f"Username:  {username}\n"
-                                                  f"Password:  {password}\n")
-        if save_approved:
-            with open(PASSWORDS_FILE_PATH, "a") as file:
-                file.write(f"| {website} | {username} | {password} |\n")
-            clear_values()
+        data = {
+            website: {
+                "username": username,
+                "password": password},
+        }
+        save_to_file(data)
+        clear_values()
     website_entry.focus()
+
+
+def save_to_file(data):
+    try:
+        with open(PASSWORDS_FILE_PATH, "r") as file:
+            json_data = json.load(file)
+    except FileNotFoundError:
+        with open(PASSWORDS_FILE_PATH, "w") as file:
+            json.dump(data, file, indent=4)
+    else:
+        json_data.update(data)
+        with open(PASSWORDS_FILE_PATH, "w") as file:
+            json.dump(json_data, file, indent=4)
+
 
 
 def clear_values():
@@ -85,9 +118,13 @@ logo_picture.grid(row=0, column=1, columnspan=2)
 
 # Website input field
 Label(text="Website:", justify="left").grid(row=1, column=0)
-website_entry = Entry(width=39)
-website_entry.grid(row=1, column=1, columnspan=2, sticky=W)
+website_entry = Entry(width=21)
+website_entry.grid(row=1, column=1, sticky=W)
 website_entry.focus()
+
+# Search button
+search_button = Button(text="Search", width=13, command=search_credentials)
+search_button.grid(row=1, column=2)
 
 # Email/username input field
 Label(text="Email/Username:").grid(row=2, column=0)
@@ -98,7 +135,6 @@ username_entry.grid(row=2, column=1, columnspan=2, sticky=W)
 Label(text="Password:").grid(row=3, column=0)
 password_entry = Entry(width=21)
 password_entry.grid(row=3, column=1, sticky=W)
-password_entry.get()
 
 # Generate password button
 Button(text="Generate Password", command=generate_password).grid(row=3, column=2)
